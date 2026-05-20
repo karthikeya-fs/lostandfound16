@@ -1,13 +1,32 @@
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { FiHome, FiLogIn, FiUserPlus, FiPlusCircle, FiMenu, FiChevronDown, FiList, FiAlertTriangle, FiUser } from "react-icons/fi";
+import { FiHome, FiLogIn, FiUserPlus, FiPlusCircle, FiMenu, FiChevronDown, FiList, FiAlertTriangle, FiUser, FiMoon, FiSun, FiFlag } from "react-icons/fi";
 
 function Navbar() {
   const location = useLocation();
-  
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("theme");
+    const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
+    const initialDark = savedTheme ? savedTheme === "dark" : prefersDark;
+    setIsDarkMode(initialDark);
+    document.documentElement.classList.toggle("theme-dark", initialDark);
+    document.documentElement.classList.toggle("theme-light", !initialDark);
+  }, []);
+
+  const toggleTheme = () => {
+    const nextDark = !isDarkMode;
+    setIsDarkMode(nextDark);
+    localStorage.setItem("theme", nextDark ? "dark" : "light");
+    document.documentElement.classList.toggle("theme-dark", nextDark);
+    document.documentElement.classList.toggle("theme-light", !nextDark);
+  };
+
   const isActive = (path) => location.pathname === path;
 
   return (
-    <nav className="fixed top-0 left-0 w-full z-50 bg-slate-950/80 backdrop-blur-xl border-b border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.1)]">
+    <nav className="fixed top-0 left-0 w-full z-50 backdrop-blur-xl border-b border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.1)]" style={{ backgroundColor: "var(--navbar)" }}>
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
         
         {/* Logo */}
@@ -17,7 +36,7 @@ function Navbar() {
             <img
               src="/logo.png"
               alt="Logo"
-              className="relative w-14 h-14 rounded-2xl shadow-lg object-cover bg-white p-1 transform group-hover:scale-105 transition duration-300"
+              className="relative w-14 h-14 rounded-2xl shadow-lg object-cover bg-pure-white p-1 transform group-hover:scale-105 transition duration-300"
             />
           </div>
           <div>
@@ -60,6 +79,16 @@ function Navbar() {
                 All Items
               </Link>
               
+              <Link to="/found-items" className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:text-cyan-400 hover:bg-white/5 transition-all duration-300">
+                <FiList className="text-lg" />
+                Found Items
+              </Link>
+
+              <Link to="/lost-reports" className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:text-amber-400 hover:bg-white/5 transition-all duration-300">
+                <FiFlag className="text-lg" />
+                Reported lost
+              </Link>
+
               <Link to="/report-lost" className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:text-amber-400 hover:bg-white/5 transition-all duration-300">
                 <FiAlertTriangle className="text-lg" />
                 Report Lost Item
@@ -84,6 +113,16 @@ function Navbar() {
 
             </div>
           </div>
+
+          {/* Theme toggle */}
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="flex items-center justify-center w-11 h-11 rounded-2xl border border-white/10 bg-white/10 text-gray-200 hover:bg-white/20 transition-all duration-300"
+            aria-label="Toggle light and dark mode"
+          >
+            {isDarkMode ? <FiSun className="text-lg text-amber-300" /> : <FiMoon className="text-lg text-cyan-300" />}
+          </button>
 
           {/* Profile Icon */}
           <Link

@@ -122,11 +122,11 @@ function VerifyOTP() {
 
         {/* Logo */}
         <div className="flex justify-center mb-5">
-          <img
-            src="/logo.png"
-            alt="Logo"
-            className="w-24 h-24 rounded-3xl bg-white p-2 shadow-lg"
-          />
+            <img
+              src="/logo.png"
+              alt="Logo"
+              className="w-24 h-24 rounded-3xl bg-pure-white p-2 shadow-lg"
+            />
         </div>
 
         {/* Heading */}

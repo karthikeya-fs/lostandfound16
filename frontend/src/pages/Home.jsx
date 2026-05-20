@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { FiPlusCircle, FiAlertTriangle } from "react-icons/fi";
+import { FiPackage, FiAlertTriangle } from "react-icons/fi";
 
 function Home() {
 
@@ -30,7 +30,7 @@ function Home() {
             A smart, secure, and intuitive platform helping students reconnect
             with their lost belongings across the campus quickly and safely.
           </p>
-          
+
           {/* Explore Button */}
           <div className="max-w-2xl mx-auto mb-14 animate-fade-in-up-delay-2 relative group flex justify-center">
              <Link
@@ -41,13 +41,13 @@ function Home() {
              </Link>
           </div>
 
-          {/* Buttons */}
+          {/* Post found & report lost */}
           <div className="flex flex-wrap justify-center gap-6 animate-fade-in-up-delay-2">
             <Link
               to="/post-item"
-              className="group relative flex items-center gap-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold px-8 py-4 rounded-full shadow-[0_0_30px_rgba(6,182,212,0.3)] hover:shadow-[0_0_40px_rgba(6,182,212,0.6)] transition-all duration-300 hover:-translate-y-1"
+              className="group flex items-center gap-3 border-2 border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/10 text-white px-8 py-4 rounded-full font-semibold shadow-xl transition-all duration-300 hover:-translate-y-1 hover:border-white/20"
             >
-              <FiPlusCircle className="text-2xl group-hover:rotate-90 transition-transform duration-300" />
+              <FiPackage className="text-xl text-cyan-400 group-hover:scale-110 transition-transform duration-300" aria-hidden />
               <span>Post Found Item</span>
             </Link>
 
@@ -55,7 +55,7 @@ function Home() {
               to="/report-lost"
               className="group flex items-center gap-3 border-2 border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/10 text-white px-8 py-4 rounded-full font-semibold shadow-xl transition-all duration-300 hover:-translate-y-1 hover:border-white/20"
             >
-              <FiAlertTriangle className="text-xl text-amber-400 group-hover:scale-110 transition-transform duration-300" />
+              <FiAlertTriangle className="text-xl text-amber-400 group-hover:scale-110 transition-transform duration-300" aria-hidden />
               <span>Report Lost Item</span>
             </Link>
           </div>

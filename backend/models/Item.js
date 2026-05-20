@@ -35,6 +35,18 @@ const itemSchema = new mongoose.Schema(
 
     images: [String],
 
+    /** Shown for lost-item reports (optional) */
+    reward: {
+      type: String,
+      default: "",
+    },
+
+    /** Contact for lost-item reports */
+    contact: {
+      type: String,
+      default: "",
+    },
+
     postedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
