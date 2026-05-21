@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const protect = require("../middleware/authMiddleware");
 
 const { upload } = require("../middleware/upload");
 const {
@@ -10,8 +11,8 @@ const {
   getSingleItem,
 } = require("../controllers/itemController");
 
-router.post("/create", upload.single("image"), createItem);
-router.post("/report-lost", upload.single("image"), reportLostItem);
+router.post("/create", protect, upload.single("image"), createItem);
+router.post("/report-lost", protect, upload.single("image"), reportLostItem);
 router.get("/all", getAllItems);
 router.get("/lost", getLostItems);
 router.get("/:id", getSingleItem);

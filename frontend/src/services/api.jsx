@@ -1,7 +1,21 @@
 import axios from "axios";
 
+// Prefer explicit env; in local dev use Vite proxy (`/api`) when unset so requests stay same-origin.
+const baseURL =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? "/api" : "http://localhost:5000/api");
+
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
+  baseURL,
+  timeout: 30000,
+});
+
+API.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
 
 /** Origin for static files (e.g. `/uploads/...`) served by the API server */

@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import API from "../services/api";
 import FormLayout from "../components/FormLayout";
+import CampusMap from "../components/CampusMap";
+import { useCampusMetadata } from "../hooks/useCampusMetadata";
 import {
   FiImage,
   FiType,
@@ -10,9 +13,34 @@ import {
   FiCalendar,
   FiPlusCircle,
   FiList,
+  FiCpu,
+  FiCreditCard,
+  FiEyeOff,
+  FiBox,
 } from "react-icons/fi";
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.06,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 15 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { type: "spring", stiffness: 350, damping: 25 },
+  },
+};
+
 function PostItem() {
+  const { categories, buildings, buildingNames } = useCampusMetadata();
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -21,6 +49,7 @@ function PostItem() {
     location: "",
     date: "",
     image: null,
+    blurImage: false,
   });
 
   const [preview, setPreview] = useState(null);
@@ -46,8 +75,33 @@ function PostItem() {
     }
   };
 
+  const handleCategorySelect = (cat) => {
+    setFormData((prev) => ({
+      ...prev,
+      category: cat.id,
+      blurImage: cat.blurByDefault ? true : prev.blurImage,
+    }));
+  };
+
+  const handleLocationSelect = (locId) => {
+    setFormData((prev) => ({ ...prev, location: locId }));
+  };
+
+  const handleToggleBlur = () => {
+    setFormData((prev) => ({ ...prev, blurImage: !prev.blurImage }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!formData.category) {
+      alert("Please select a category.");
+      return;
+    }
+    if (!formData.location) {
+      alert("Please tag a campus location.");
+      return;
+    }
 
     try {
       setLoading(true);
@@ -59,6 +113,7 @@ function PostItem() {
       data.append("category", formData.category);
       data.append("location", formData.location);
       data.append("date", formData.date);
+      data.append("blurImage", formData.blurImage);
       if (formData.image instanceof File) {
         data.append("image", formData.image);
       }
@@ -68,6 +123,18 @@ function PostItem() {
       });
 
       alert(res.data.message || "Item Posted Successfully ✅");
+      // Reset form
+      setFormData({
+        title: "",
+        description: "",
+        type: "found",
+        category: "",
+        location: "",
+        date: "",
+        image: null,
+        blurImage: false,
+      });
+      setPreview(null);
     } catch (error) {
       alert(error.response?.data?.message || "Something went wrong");
     } finally {
@@ -80,16 +147,30 @@ function PostItem() {
       maxWidth="md"
       backTo="/home"
       backLabel="Back to home"
-      title="Post item"
-      subtitle="Found is selected by default. Change the type if you are posting something else."
+      title="Post Found Item"
+      subtitle="Complete the form details and tag the location on the map to help reuniting the item."
       icon={<FiPlusCircle />}
     >
-      <form onSubmit={handleSubmit} className="form-stack">
-        <div className="form-field">
+      <motion.form
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        onSubmit={handleSubmit}
+        className="form-stack text-left"
+      >
+        {/* Upload Section */}
+        <motion.div variants={itemVariants} className="form-field">
           <span className="form-label-static" id="post-photo-label">
-            Item photo
+            Item Photo
           </span>
-          <label className="form-upload" htmlFor="post-item-photo" aria-labelledby="post-photo-label">
+          <motion.label
+            whileHover={{ scale: 1.01, borderColor: "var(--text)" }}
+            whileTap={{ scale: 0.99 }}
+            transition={{ duration: 0.2 }}
+            className="form-upload"
+            htmlFor="post-item-photo"
+            aria-labelledby="post-photo-label"
+          >
             {preview ? (
               <>
                 <img src={preview} alt="" className="form-upload-preview" />
@@ -112,34 +193,65 @@ function PostItem() {
               onChange={handleChange}
               className="form-upload-input"
             />
-          </label>
-        </div>
+          </motion.label>
+        </motion.div>
 
-        <div className="form-field">
-          <label htmlFor="title">Item title</label>
+        {/* Privacy Blur Toggle */}
+        <motion.div
+          variants={itemVariants}
+          className="bg-slate-900/40 border border-white/10 rounded-2xl p-5 flex items-center justify-between gap-4"
+        >
+          <div className="flex-1">
+            <h4 className="text-white font-bold text-sm flex items-center gap-2 mb-1">
+              <FiEyeOff className="text-cyan-400" />
+              Privacy Image Blurring
+            </h4>
+            <p className="text-gray-400 text-xs leading-relaxed">
+              If enabled, this image will remain blurred in public search until someone submits a verified proof of ownership. Highly recommended for ID cards, keys, or wallets.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleToggleBlur}
+            className={`w-14 h-7 rounded-full p-1 transition-all duration-300 relative shrink-0 ${
+              formData.blurImage ? "bg-cyan-500" : "bg-gray-600"
+            }`}
+          >
+            <div
+              className={`w-5 h-5 bg-white rounded-full transition-all duration-300 shadow-md ${
+                formData.blurImage ? "translate-x-7" : "translate-x-0"
+              }`}
+            ></div>
+          </button>
+        </motion.div>
+
+        {/* Title */}
+        <motion.div variants={itemVariants} className="form-field">
+          <label htmlFor="title">Item Title</label>
           <div className="form-input-wrap">
             <FiType className="form-input-icon" aria-hidden />
             <input
               id="title"
               type="text"
               name="title"
-              placeholder="e.g. Black leather wallet"
+              placeholder="e.g. Black leather wallet, iPhone 13"
               value={formData.title}
               onChange={handleChange}
               required
               className="form-input"
             />
           </div>
-        </div>
+        </motion.div>
 
-        <div className="form-field">
-          <label htmlFor="description">Description</label>
+        {/* Description */}
+        <motion.div variants={itemVariants} className="form-field">
+          <label htmlFor="description">Detailed Description</label>
           <div className="form-input-wrap">
             <FiAlignLeft className="form-input-icon form-textarea-icon" aria-hidden />
             <textarea
               id="description"
               name="description"
-              placeholder="Describe the item in detail..."
+              placeholder="Describe the item's condition, characteristics, distinct marks (please do not write passwords or card pins)..."
               value={formData.description}
               onChange={handleChange}
               rows="4"
@@ -147,68 +259,71 @@ function PostItem() {
               className="form-input"
             />
           </div>
-        </div>
+        </motion.div>
 
-        <div className="form-grid-2">
-          <div className="form-field">
-            <label htmlFor="type">Item type</label>
-            <div className="form-input-wrap form-input-wrap--select">
-              <FiList className="form-input-icon" aria-hidden />
-              <select
-                id="type"
-                name="type"
-                value={formData.type}
-                onChange={handleChange}
-                className="form-input"
-              >
-                <option value="lost">Lost</option>
-                <option value="found">Found</option>
-              </select>
-            </div>
+        {/* Category Choice Grid */}
+        <motion.div variants={itemVariants} className="form-field">
+          <label>Select Category</label>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-1.5">
+            {categories.map((cat) => {
+              const isSelected = formData.category === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => handleCategorySelect(cat)}
+                  className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all duration-300 gap-2 ${
+                    isSelected
+                      ? "bg-cyan-500/10 border-cyan-400 text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.15)]"
+                      : "bg-slate-900/40 border-white/10 text-gray-400 hover:border-white/20 hover:text-white"
+                  }`}
+                >
+                  <span className="text-xl">
+                    <cat.Icon />
+                  </span>
+                  <span className="text-xs font-bold">{cat.label}</span>
+                </button>
+              );
+            })}
           </div>
+        </motion.div>
 
-          <div className="form-field">
-            <label htmlFor="category">Category</label>
-            <div className="form-input-wrap">
-              <FiTag className="form-input-icon" aria-hidden />
-              <input
-                id="category"
-                type="text"
-                name="category"
-                placeholder="Electronics, ID card..."
-                value={formData.category}
-                onChange={handleChange}
-                required
-                className="form-input"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="form-field">
-          <label htmlFor="location">Location</label>
-          <div className="form-input-wrap">
+        {/* Location Dropdown Selection & Interactive Map */}
+        <motion.div variants={itemVariants} className="form-field">
+          <label htmlFor="location">Where was it found?</label>
+          <div className="form-input-wrap mb-4">
             <FiMapPin className="form-input-icon" aria-hidden />
-            <input
+            <select
               id="location"
-              type="text"
               name="location"
-              placeholder="Library, cafeteria..."
               value={formData.location}
               onChange={handleChange}
-              required
               className="form-input"
-            />
+              required
+            >
+              <option value="" disabled>Select campus building or grounds...</option>
+              {buildingNames.map((loc) => (
+                <option key={loc} value={loc}>
+                  {loc}
+                </option>
+              ))}
+            </select>
           </div>
-        </div>
+          <CampusMap
+            selectedLocation={formData.location}
+            onSelectLocation={handleLocationSelect}
+            buildings={buildings}
+          />
+        </motion.div>
 
-        <div className="form-field">
-          <label htmlFor="date">Date</label>
+        {/* Precision Date & Time Picker */}
+        <motion.div variants={itemVariants} className="form-field">
+          <label htmlFor="date">Date & Time Found</label>
           <div className="form-input-wrap">
             <FiCalendar className="form-input-icon" aria-hidden />
             <input
               id="date"
-              type="date"
+              type="datetime-local"
               name="date"
               value={formData.date}
               onChange={handleChange}
@@ -216,13 +331,27 @@ function PostItem() {
               className="form-input"
             />
           </div>
-        </div>
+        </motion.div>
 
-        <button type="submit" disabled={loading} className="form-btn-primary">
-          {loading ? "Posting..." : "Post item"}
-          <FiPlusCircle aria-hidden />
-        </button>
-      </form>
+        {/* Submit */}
+        <motion.button
+          variants={itemVariants}
+          type="submit"
+          disabled={loading}
+          whileHover={{ scale: 1.015 }}
+          whileTap={{ scale: 0.97 }}
+          className="form-btn-primary mt-4"
+        >
+          {loading ? "Posting..." : "Post Found Item"}
+          <motion.span
+            animate={loading ? { rotate: 360 } : {}}
+            transition={loading ? { repeat: Infinity, duration: 1.2, ease: "linear" } : {}}
+            style={{ display: "inline-flex", alignItems: "center" }}
+          >
+            <FiPlusCircle aria-hidden />
+          </motion.span>
+        </motion.button>
+      </motion.form>
     </FormLayout>
   );
 }

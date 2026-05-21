@@ -9,22 +9,19 @@ import PostItem from "./pages/PostItem";
 import Navbar from "./components/Navbar";
 import ItemDetails from "./pages/ItemDetails";
 import ForgotPassword from "./pages/ForgotPassword";
-import ReportLostItem from "./pages/ReportLostItem";
 import VerifyOTP from "./pages/VerifyOtp";
+import ReportLostItem from "./pages/ReportLostItem";
 import ItemsList from "./pages/ItemsList";
 import FoundItems from "./pages/FoundItems";
 import LostReports from "./pages/LostReports";
 import Profile from "./pages/Profile";
+import ChatLayout from "./layouts/ChatLayout";
+import Messages from "./pages/Messages";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import { isAdmin, isAuthenticated } from "./utils/authStorage";
 
 function App() {
-
-  const isAuth = () => {
-    try {
-      return !!localStorage.getItem("token");
-    } catch (e) {
-      return false;
-    }
-  };
+  const isAuth = () => isAuthenticated();
 
   return (
     <BrowserRouter>
@@ -33,21 +30,44 @@ function App() {
       <Toaster
         position="top-right"
         toastOptions={{
+          duration: 3000,
           style: {
             background: "#0f172a",
-            color: "#fff",
+            color: "#ffffff",
             border: "1px solid #334155",
+            borderRadius: "14px",
+            padding: "14px",
           },
         }}
       />
 
+      {/* Navbar */}
       <Navbar />
 
+      {/* Main Content */}
       <main className="min-h-screen overflow-x-hidden">
         <Routes>
 
-          <Route path="/" element={<Login />} />
+          {/* Default Route */}
+          <Route
+            path="/"
+            element={
+              isAuth()
+                ? <Navigate to="/home" replace />
+                : <Login />
+            }
+          />
 
+          {/* Login — always reachable so users can sign in as another account or recover from a stale token */}
+          <Route path="/login" element={<Login />} />
+
+          {/* Register — always reachable */}
+          <Route path="/register" element={<Register />} />
+
+          {/* Verify OTP (after register) */}
+          <Route path="/verify-otp" element={<VerifyOTP />} />
+
+          {/* Home */}
           <Route
             path="/home"
             element={
@@ -57,6 +77,7 @@ function App() {
             }
           />
 
+          {/* Items */}
           <Route
             path="/items"
             element={
@@ -66,6 +87,7 @@ function App() {
             }
           />
 
+          {/* Found Items */}
           <Route
             path="/found-items"
             element={
@@ -75,6 +97,7 @@ function App() {
             }
           />
 
+          {/* Lost Reports */}
           <Route
             path="/lost-reports"
             element={
@@ -84,10 +107,7 @@ function App() {
             }
           />
 
-          <Route path="/login" element={<Login />} />
-
-          <Route path="/register" element={<Register />} />
-
+          {/* Post Item */}
           <Route
             path="/post-item"
             element={
@@ -97,6 +117,7 @@ function App() {
             }
           />
 
+          {/* Item Details */}
           <Route
             path="/item/:id"
             element={
@@ -106,11 +127,7 @@ function App() {
             }
           />
 
-          <Route
-            path="/forgot-password"
-            element={<ForgotPassword />}
-          />
-
+          {/* Report Lost */}
           <Route
             path="/report-lost"
             element={
@@ -120,17 +137,54 @@ function App() {
             }
           />
 
+          {/* Forgot Password */}
           <Route
-            path="/verify-otp"
-            element={<VerifyOTP />}
+            path="/forgot-password"
+            element={<ForgotPassword />}
           />
 
+          {/* Messaging — single ChatLayout keeps Socket.io alive across list + room */}
+          <Route
+            path="messages"
+            element={
+              isAuth() ? (
+                <ChatLayout />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          >
+            <Route index element={<Messages />} />
+            <Route path=":roomId" element={<Messages />} />
+          </Route>
+
+          {/* Profile */}
           <Route
             path="/profile"
             element={
               isAuth()
                 ? <Profile />
                 : <Navigate to="/login" replace />
+            }
+          />
+
+          {/* Admin */}
+          <Route
+            path="/admin"
+            element={
+              isAuth() && isAdmin()
+                ? <AdminDashboard />
+                : <Navigate to={isAuth() ? "/home" : "/login"} replace />
+            }
+          />
+
+          {/* 404 Route */}
+          <Route
+            path="*"
+            element={
+              <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white text-2xl font-bold">
+                404 | Page Not Found
+              </div>
             }
           />
 

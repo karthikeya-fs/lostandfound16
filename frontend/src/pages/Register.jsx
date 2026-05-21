@@ -1,8 +1,18 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import toast from "react-hot-toast";
+
 import API from "../services/api";
 import FormLayout from "../components/FormLayout";
-import { FiUser, FiMail, FiLock, FiBook, FiUserPlus } from "react-icons/fi";
+
+import {
+  FiUser,
+  FiMail,
+  FiLock,
+  FiBook,
+  FiUserPlus,
+} from "react-icons/fi";
 
 const DEPARTMENTS = [
   { value: "CSE", label: "Computer Science & Engineering (CSE)" },
@@ -20,10 +30,34 @@ const DEPARTMENTS = [
   { value: "MCA", label: "MCA (Computer Applications)" },
   { value: "PHARM", label: "Pharmacy" },
   { value: "LAW", label: "Law" },
-  { value: "SCIENCE", label: "Science (Physics / Chemistry / Maths)" },
+  { value: "SCIENCE", label: "Science" },
   { value: "HUMANITIES", label: "Arts & Humanities" },
   { value: "OTHER", label: "Other" },
 ];
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 15 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring",
+      stiffness: 300,
+      damping: 22,
+    },
+  },
+};
 
 function Register() {
   const navigate = useNavigate();
@@ -37,29 +71,49 @@ function Register() {
 
   const [loading, setLoading] = useState(false);
 
+  // Handle Input Change
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
+    setFormData((prev) => ({
+      ...prev,
       [e.target.name]: e.target.value,
-    });
+    }));
   };
 
+  // REGISTER USER DIRECTLY (NO OTP)
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     try {
       setLoading(true);
 
-      const res = await API.post("/auth/send-otp", {
-        email: formData.email,
-      });
+      const payload = {
+        ...formData,
+        email: formData.email.trim().toLowerCase(),
+      };
 
-      alert(res.data.message);
+      const res = await API.post(
+        "/auth/register",
+        payload
+      );
 
-      localStorage.setItem("registerData", JSON.stringify(formData));
-      navigate("/verify-otp");
+      toast.success(
+        res.data.message || "Registration Successful"
+      );
+
+      navigate("/login");
+
     } catch (error) {
-      alert(error.response?.data?.message || "Failed to Send OTP");
+      console.error(error);
+
+      let message = error.response?.data?.message;
+
+      if (!message && error.request && !error.response) {
+        message =
+          "Cannot reach the server. Start the backend (npm run dev in /backend) and try again.";
+      }
+
+      toast.error(message || error.message || "Registration failed");
+
     } finally {
       setLoading(false);
     }
@@ -67,95 +121,164 @@ function Register() {
 
   return (
     <FormLayout
-      title="Create account"
-      subtitle="Join the campus lost & found network"
+      title="Create Account"
+      subtitle="Join the Campus Lost & Found Network"
       icon={<FiUserPlus />}
     >
-      <form onSubmit={handleSubmit} className="form-stack">
-        <div className="form-field">
-          <label htmlFor="name">Full name</label>
-          <div className="form-input-wrap">
-            <FiUser className="form-input-icon" />
+      <motion.form
+        onSubmit={handleSubmit}
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="space-y-5"
+      >
+
+        {/* Name */}
+        <motion.div
+          variants={itemVariants}
+          className="space-y-2"
+        >
+          <label className="text-sm text-gray-300">
+            Full Name
+          </label>
+
+          <div className="relative">
+            <FiUser className="absolute top-1/2 left-4 -translate-y-1/2 text-cyan-400" />
+
             <input
-              id="name"
               type="text"
               name="name"
-              placeholder="Your name"
+              placeholder="Enter your full name"
+              value={formData.name}
               onChange={handleChange}
               required
-              className="form-input"
+              className="w-full bg-slate-900/70 border border-white/10 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/30 outline-none rounded-2xl py-3 pl-12 pr-4 text-white transition"
             />
           </div>
-        </div>
+        </motion.div>
 
-        <div className="form-field">
-          <label htmlFor="email">University email</label>
-          <div className="form-input-wrap">
-            <FiMail className="form-input-icon" />
+        {/* Email */}
+        <motion.div
+          variants={itemVariants}
+          className="space-y-2"
+        >
+          <label className="text-sm text-gray-300">
+            Email
+          </label>
+
+          <div className="relative">
+            <FiMail className="absolute top-1/2 left-4 -translate-y-1/2 text-cyan-400" />
+
             <input
-              id="email"
               type="email"
               name="email"
-              placeholder="you@university.edu"
+              placeholder="you@example.com"
+              value={formData.email}
               onChange={handleChange}
               required
-              className="form-input"
+              className="w-full bg-slate-900/70 border border-white/10 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/30 outline-none rounded-2xl py-3 pl-12 pr-4 text-white transition"
             />
           </div>
-        </div>
+        </motion.div>
 
-        <div className="form-field">
-          <label htmlFor="password">Password</label>
-          <div className="form-input-wrap">
-            <FiLock className="form-input-icon" />
+        {/* Password */}
+        <motion.div
+          variants={itemVariants}
+          className="space-y-2"
+        >
+          <label className="text-sm text-gray-300">
+            Password
+          </label>
+
+          <div className="relative">
+            <FiLock className="absolute top-1/2 left-4 -translate-y-1/2 text-cyan-400" />
+
             <input
-              id="password"
               type="password"
               name="password"
               placeholder="Create a strong password"
+              value={formData.password}
               onChange={handleChange}
               required
-              className="form-input"
+              minLength={6}
+              className="w-full bg-slate-900/70 border border-white/10 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/30 outline-none rounded-2xl py-3 pl-12 pr-4 text-white transition"
             />
           </div>
-        </div>
+        </motion.div>
 
-        <div className="form-field">
-          <label htmlFor="department">Department</label>
-          <div className="form-input-wrap form-input-wrap--select">
-            <FiBook className="form-input-icon" aria-hidden />
+        {/* Department */}
+        <motion.div
+          variants={itemVariants}
+          className="space-y-2"
+        >
+          <label className="text-sm text-gray-300">
+            Department
+          </label>
+
+          <div className="relative">
+            <FiBook className="absolute top-1/2 left-4 -translate-y-1/2 text-cyan-400 z-10" />
+
             <select
-              id="department"
               name="department"
               value={formData.department}
               onChange={handleChange}
               required
-              className="form-input"
+              className="w-full appearance-none bg-slate-900/70 border border-white/10 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/30 outline-none rounded-2xl py-3 pl-12 pr-4 text-white transition"
             >
-              <option value="" disabled>
-                Select your department
+              <option value="">
+                Select Department
               </option>
-              {DEPARTMENTS.map((d) => (
-                <option key={d.value} value={d.value}>
-                  {d.label}
+
+              {DEPARTMENTS.map((dept) => (
+                <option
+                  key={dept.value}
+                  value={dept.value}
+                >
+                  {dept.label}
                 </option>
               ))}
             </select>
           </div>
-        </div>
+        </motion.div>
 
-        <button type="submit" disabled={loading} className="form-btn-primary">
-          {loading ? "Sending OTP..." : "Continue"}
-          <FiUserPlus aria-hidden />
-        </button>
-      </form>
+        {/* Submit Button */}
+        <motion.button
+          variants={itemVariants}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.97 }}
+          type="submit"
+          disabled={loading}
+          className="w-full mt-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 py-3 rounded-2xl font-semibold text-white shadow-lg shadow-cyan-500/20 transition disabled:opacity-60 flex items-center justify-center gap-2"
+        >
+          {loading ? (
+            <>
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              Creating Account...
+            </>
+          ) : (
+            <>
+              <FiUserPlus />
+              Create Account
+            </>
+          )}
+        </motion.button>
+      </motion.form>
 
-      <p className="form-footer">
+      {/* Footer */}
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+        className="text-center text-sm text-gray-400 mt-6"
+      >
         Already have an account?{" "}
-        <Link to="/login" className="form-link">
-          Sign in
+        <Link
+          to="/login"
+          className="text-cyan-400 hover:text-cyan-300 font-medium transition"
+        >
+          Sign In
         </Link>
-      </p>
+      </motion.p>
     </FormLayout>
   );
 }

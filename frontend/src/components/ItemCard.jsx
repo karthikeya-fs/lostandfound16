@@ -1,8 +1,14 @@
 import { Link } from "react-router-dom";
 import { assetUrl } from "../services/api";
+import { getStoredUserId } from "../utils/authStorage";
+import { FiEyeOff } from "react-icons/fi";
 
 function ItemCard({ item }) {
   const img = item.images?.length ? assetUrl(item.images[0]) : "";
+  const myId = getStoredUserId();
+  const ownerId = item.postedBy?._id || item.postedBy;
+  const isOwner = myId && ownerId && String(ownerId) === String(myId);
+  const shouldBlur = item.blurImage && !isOwner;
 
   return (
     <Link to={`/item/${item._id}`} className="group block h-full">
@@ -12,13 +18,26 @@ function ItemCard({ item }) {
             <img
               src={img}
               alt=""
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              className={`w-full h-full object-cover group-hover:scale-105 transition-all duration-500 ${
+                shouldBlur ? "blur-md scale-110 opacity-70 select-none pointer-events-none" : ""
+              }`}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-gray-500 text-sm">
               No photo
             </div>
           )}
+
+          {/* Privacy Overlay */}
+          {shouldBlur && (
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-xs flex flex-col items-center justify-center gap-1 p-3 text-center">
+              <FiEyeOff className="text-red-400 text-lg" />
+              <span className="text-[9px] font-black text-white uppercase tracking-wider bg-red-600/90 px-2 py-0.5 rounded-full border border-red-500/20 shadow-md">
+                🔒 Sensitive Item
+              </span>
+            </div>
+          )}
+
           <span
             className={`absolute top-3 right-3 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md ${
               item.type === "lost"

@@ -1,71 +1,160 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { FiPackage, FiAlertTriangle } from "react-icons/fi";
+import { motion } from "framer-motion";
+import { FiPackage, FiAlertTriangle, FiTrendingUp, FiUsers, FiCheckCircle } from "react-icons/fi";
+import RhythmicRipplesBackground from "@/components/ui/rhythmic-ripples-background";
+import API from "../services/api";
+
+const fadeUpVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: (i) => ({
+    opacity: 1,
+    y: 0,
+    transition: {
+      delay: i * 0.25,
+      duration: 0.9,
+      ease: [0.4, 0.0, 0.2, 1],
+    },
+  }),
+};
 
 function Home() {
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    API.get("/stats/public")
+      .then((res) => setStats(res.data))
+      .catch(() => setStats(null));
+  }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950/40 to-black text-white overflow-hidden relative">
+    <div className="text-white">
+      <RhythmicRipplesBackground
+        backgroundColor="#030303"
+        rippleColor="rgba(99, 179, 237, 0.25)"
+        rippleCount={20}
+        rippleSpeed={0.5}
+      >
+        <div className="max-w-4xl mx-auto px-4 pt-24 text-center">
+          <motion.div
+            variants={fadeUpVariants}
+            initial="hidden"
+            animate="visible"
+            custom={0}
+            className="mb-6 inline-flex items-center justify-center rounded-full border border-white/10 bg-black/10 px-5 py-2 text-sm text-white/70 backdrop-blur-sm"
+          >
+            Campus Lost & Found Network
+          </motion.div>
 
-      {/* Background Glow with Animations */}
-      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-cyan-500/20 blur-[120px] rounded-full animate-float pointer-events-none"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-blue-600/20 blur-[150px] rounded-full animate-float-delayed pointer-events-none"></div>
-      <div className="absolute top-[40%] left-[60%] w-[300px] h-[300px] bg-purple-500/10 blur-[100px] rounded-full animate-float pointer-events-none"></div>
+          <motion.h1
+            variants={fadeUpVariants}
+            initial="hidden"
+            animate="visible"
+            custom={1}
+            className="text-5xl font-bold tracking-tighter sm:text-7xl md:text-8xl bg-clip-text text-transparent bg-gradient-to-b from-white to-white/60"
+          >
+            Reconnect with what you lost
+          </motion.h1>
 
-      {/* Hero Section */}
-      <section className="relative pt-40 pb-20 px-6 animate-fade-in-up z-10">
+          <motion.p
+            variants={fadeUpVariants}
+            initial="hidden"
+            animate="visible"
+            custom={2}
+            className="mx-auto mt-8 max-w-2xl text-lg leading-8 text-white/50"
+          >
+            A smart, secure platform helping students find lost belongings
+            across campus quickly and safely.
+          </motion.p>
 
-        <div className="max-w-7xl mx-auto text-center">
+          {stats && (
+            <motion.div
+              variants={fadeUpVariants}
+              initial="hidden"
+              animate="visible"
+              custom={2.5}
+              className="mx-auto mt-10 max-w-3xl rounded-2xl border border-white/10 bg-black/20 px-6 py-6 backdrop-blur-md"
+            >
+              <p className="text-lg font-semibold text-cyan-300 flex items-center justify-center gap-2">
+                <FiTrendingUp />
+                {stats.headline}
+              </p>
+              <p className="mt-2 text-sm text-white/50">{stats.encouragement}</p>
+              <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                <div>
+                  <p className="text-2xl font-bold text-white flex items-center justify-center gap-1">
+                    <FiCheckCircle className="text-emerald-400" />
+                    {stats.itemsReturned}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">Returned</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-white">{stats.totalItems}</p>
+                  <p className="text-xs text-gray-400 mt-1">Total posts</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-white">{stats.openItems}</p>
+                  <p className="text-xs text-gray-400 mt-1">Still open</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-white flex items-center justify-center gap-1">
+                    <FiUsers className="text-cyan-400" />
+                    {stats.totalUsers}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">Community</p>
+                </div>
+              </div>
+            </motion.div>
+          )}
 
-          {/* Main Heading */}
-          <h1 className="text-5xl md:text-7xl font-black leading-tight tracking-tight mb-6">
-            Campus
-            <span className="bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent inline-block animate-fade-in-up-delay-1 px-3">
-              Lost & Found
-            </span>
-            Network
-          </h1>
+          <motion.div
+            variants={fadeUpVariants}
+            initial="hidden"
+            animate="visible"
+            custom={3}
+            className="mt-12 flex flex-col items-center justify-center gap-6 sm:flex-row"
+          >
+            <Link
+              to="/items"
+              className="rounded-full bg-indigo-500 px-7 py-4 text-lg font-semibold text-white shadow-lg shadow-indigo-500/20 transition-transform hover:scale-105"
+            >
+              Explore All Items
+            </Link>
+          </motion.div>
 
-          {/* Subtitle */}
-          <p className="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed animate-fade-in-up-delay-1 mb-12">
-            A smart, secure, and intuitive platform helping students reconnect
-            with their lost belongings across the campus quickly and safely.
-          </p>
-
-          {/* Explore Button */}
-          <div className="max-w-2xl mx-auto mb-14 animate-fade-in-up-delay-2 relative group flex justify-center">
-             <Link
-               to="/items"
-               className="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold px-10 py-4 rounded-full backdrop-blur-md shadow-xl transition-all duration-300 hover:shadow-cyan-500/20"
-             >
-               Explore All Items
-             </Link>
-          </div>
-
-          {/* Post found & report lost */}
-          <div className="flex flex-wrap justify-center gap-6 animate-fade-in-up-delay-2">
+          <motion.div
+            variants={fadeUpVariants}
+            initial="hidden"
+            animate="visible"
+            custom={4}
+            className="mt-10 flex flex-wrap items-center justify-center gap-4"
+          >
             <Link
               to="/post-item"
-              className="group flex items-center gap-3 border-2 border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/10 text-white px-8 py-4 rounded-full font-semibold shadow-xl transition-all duration-300 hover:-translate-y-1 hover:border-white/20"
+              className="group flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-6 py-3 font-semibold backdrop-blur-md transition-all hover:border-white/20 hover:bg-white/10"
             >
-              <FiPackage className="text-xl text-cyan-400 group-hover:scale-110 transition-transform duration-300" aria-hidden />
+              <FiPackage
+                className="text-xl text-cyan-400 transition-transform group-hover:scale-110"
+                aria-hidden
+              />
               <span>Post Found Item</span>
             </Link>
 
             <Link
               to="/report-lost"
-              className="group flex items-center gap-3 border-2 border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/10 text-white px-8 py-4 rounded-full font-semibold shadow-xl transition-all duration-300 hover:-translate-y-1 hover:border-white/20"
+              className="group flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-6 py-3 font-semibold backdrop-blur-md transition-all hover:border-white/20 hover:bg-white/10"
             >
-              <FiAlertTriangle className="text-xl text-amber-400 group-hover:scale-110 transition-transform duration-300" aria-hidden />
+              <FiAlertTriangle
+                className="text-xl text-amber-400 transition-transform group-hover:scale-110"
+                aria-hidden
+              />
               <span>Report Lost Item</span>
             </Link>
-          </div>
+          </motion.div>
         </div>
-      </section>
+      </RhythmicRipplesBackground>
 
-
-
-      {/* Footer */}
-      <footer className="relative border-t border-white/10 bg-black/50 backdrop-blur-xl py-12 mt-20 z-10">
+      <footer className="relative border-t border-white/10 bg-black/80 py-12 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="text-center md:text-left">
             <h2 className="text-2xl font-extrabold tracking-tight">

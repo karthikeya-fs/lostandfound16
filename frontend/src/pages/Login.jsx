@@ -1,8 +1,30 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import API from "../services/api";
+import { setAuthSession } from "../utils/authStorage";
 import FormLayout from "../components/FormLayout";
 import { FiMail, FiLock, FiEye, FiEyeOff, FiLogIn, FiUserPlus } from "react-icons/fi";
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08,
+      delayChildren: 0.15,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 15 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { type: "spring", stiffness: 350, damping: 25 },
+  },
+};
 
 function Login() {
   const navigate = useNavigate();
@@ -27,10 +49,12 @@ function Login() {
 
     try {
       setLoading(true);
-      const res = await API.post("/auth/login", formData);
+      const res = await API.post("/auth/login", {
+        ...formData,
+        email: formData.email.trim().toLowerCase(),
+      });
 
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("userEmail", res.data.user.email);
+      setAuthSession({ token: res.data.token, user: res.data.user });
 
       alert("Login Successful ✅ ");
       navigate("/home");
@@ -44,27 +68,34 @@ function Login() {
   return (
     <FormLayout
       title="Welcome back"
-      subtitle="Sign in with your university email"
+      subtitle="Sign in with your email"
       icon={<FiLogIn />}
     >
-      <form onSubmit={handleSubmit} className="form-stack">
-        <div className="form-field">
-          <label htmlFor="email">University email</label>
+      <motion.form
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        onSubmit={handleSubmit}
+        className="form-stack"
+      >
+        <motion.div variants={itemVariants} className="form-field">
+          <label htmlFor="email">Email</label>
           <div className="form-input-wrap">
             <FiMail className="form-input-icon" aria-hidden />
             <input
               id="email"
               type="email"
               name="email"
-              placeholder="you@college.edu"
+              placeholder="you@example.com"
+              value={formData.email}
               onChange={handleChange}
               required
               className="form-input"
             />
           </div>
-        </div>
+        </motion.div>
 
-        <div className="form-field">
+        <motion.div variants={itemVariants} className="form-field">
           <label htmlFor="password">Password</label>
           <div className="form-input-wrap">
             <FiLock className="form-input-icon" aria-hidden />
@@ -73,6 +104,7 @@ function Login() {
               type={showPassword ? "text" : "password"}
               name="password"
               placeholder="Enter your password"
+              value={formData.password}
               onChange={handleChange}
               required
               className="form-input form-input-has-toggle"
@@ -86,24 +118,50 @@ function Login() {
               {showPassword ? <FiEyeOff /> : <FiEye />}
             </button>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="form-actions-end">
-          <Link to="/forgot-password" className="form-link">
-            Forgot password?
-          </Link>
-        </div>
+        <motion.div variants={itemVariants} className="form-actions-end">
+          <motion.div
+            whileHover={{ x: 3 }}
+            transition={{ type: "spring", stiffness: 450, damping: 20 }}
+          >
+            <Link to="/forgot-password" className="form-link">
+              Forgot password?
+            </Link>
+          </motion.div>
+        </motion.div>
 
-        <button type="submit" disabled={loading} className="form-btn-primary">
+        <motion.button
+          variants={itemVariants}
+          type="submit"
+          disabled={loading}
+          whileHover={{ scale: 1.015 }}
+          whileTap={{ scale: 0.97 }}
+          className="form-btn-primary"
+        >
           {loading ? "Signing in..." : "Sign in"}
-          <FiLogIn aria-hidden />
-        </button>
-      </form>
+          <motion.span
+            animate={loading ? { rotate: 360 } : {}}
+            transition={loading ? { repeat: Infinity, duration: 1.2, ease: "linear" } : {}}
+            style={{ display: "inline-flex", alignItems: "center" }}
+          >
+            <FiLogIn aria-hidden />
+          </motion.span>
+        </motion.button>
+      </motion.form>
 
-      <Link to="/register" className="form-btn-secondary form-external-actions">
-        <FiUserPlus aria-hidden />
-        Create account
-      </Link>
+      <motion.div
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.45, type: "spring", stiffness: 350, damping: 25 }}
+        whileHover={{ scale: 1.015 }}
+        whileTap={{ scale: 0.97 }}
+      >
+        <Link to="/register" className="form-btn-secondary form-external-actions">
+          <FiUserPlus aria-hidden />
+          Create account
+        </Link>
+      </motion.div>
     </FormLayout>
   );
 }

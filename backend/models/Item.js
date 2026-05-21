@@ -57,6 +57,26 @@ const itemSchema = new mongoose.Schema(
       enum: ["open", "claimed", "resolved"],
       default: "open",
     },
+
+    blurImage: {
+      type: Boolean,
+      default: false,
+    },
+
+    isRemoved: {
+      type: Boolean,
+      default: false,
+    },
+
+    removedAt: {
+      type: Date,
+      default: null,
+    },
+
+    removedReason: {
+      type: String,
+      default: "",
+    },
   },
   { timestamps: true }
 );

@@ -18,6 +18,13 @@ const claimSchema = new mongoose.Schema(
       required: true,
     },
 
+    /** Logged-in user who submitted the claim (used for secure chat access). */
+    claimantUserId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
     message: {
       type: String,
       required: true,
