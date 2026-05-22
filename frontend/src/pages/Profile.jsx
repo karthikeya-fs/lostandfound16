@@ -78,11 +78,12 @@ function Profile() {
         const email = localStorage.getItem("userEmail");
         const token = localStorage.getItem("token");
 
-        const res = await API.get("/auth/profile", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        if (!token) {
+          setLoading(false);
+          return;
+        }
+
+        const res = await API.get("/auth/profile");
 
         setUser({
           name: res.data.name || "Not specified",
@@ -136,17 +137,7 @@ function Profile() {
     try {
       setSaving(true);
 
-      const token = localStorage.getItem("token");
-
-      await API.put(
-        "/auth/profile",
-        editData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      await API.put("/auth/profile", editData);
 
       setUser((prev) => ({
         ...prev,
@@ -278,9 +269,9 @@ function Profile() {
             </div>
 
             <div className="text-center">
-              <p className="text-cyan-400 text-sm mb-2">
-                {greeting}, Mahesh 👋
-              </p>
+             <p className="text-cyan-400 text-sm mb-2">
+             {greeting}, {user.name || "User"} 👋
+             </p>
 
               <h1 className="text-3xl font-bold">
                 {user.name}

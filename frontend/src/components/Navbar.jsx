@@ -180,6 +180,14 @@ function Navbar() {
                   <div className="h-px bg-white/10 my-1 mx-2" />
 
                   <Link
+                    to="/my-claims"
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:text-cyan-400 hover:bg-white/5 transition-all duration-300"
+                  >
+                    <FiList className="text-lg" />
+                    My Claims
+                  </Link>
+
+                  <Link
                     to="/profile"
                     className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:text-white hover:bg-white/5 transition-all duration-300"
                   >

@@ -5,6 +5,8 @@
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
+    "free-port": "node scripts/free-port.js",
+    "predev": "node scripts/free-port.js",
     "dev": "nodemon server.js"
   },
   "keywords": [],

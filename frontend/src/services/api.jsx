@@ -1,7 +1,7 @@
 import axios from "axios";
 
-// Prefer explicit env; in local dev use Vite proxy (`/api`) when unset so requests stay same-origin.
 const baseURL =
+  import.meta.env.VITE_API_BASE_URL ||
   import.meta.env.VITE_API_URL ||
   (import.meta.env.DEV ? "/api" : "http://localhost:5000/api");
 
@@ -18,7 +18,6 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
-/** Origin for static files (e.g. `/uploads/...`) served by the API server */
 export const API_ORIGIN = (() => {
   const base = API.defaults.baseURL || "http://localhost:5000/api";
   try {
@@ -28,7 +27,6 @@ export const API_ORIGIN = (() => {
   }
 })();
 
-/** Resolve a stored path like `/uploads/foo.jpg` to a full URL */
 export function assetUrl(storedPath) {
   if (!storedPath || typeof storedPath !== "string") return "";
   if (storedPath.startsWith("http://") || storedPath.startsWith("https://")) {

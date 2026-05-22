@@ -11,17 +11,11 @@ const {
   markRoomRead,
 } = require("../controllers/chatController");
 
-/** List rooms before the dynamic :roomId route */
-router.get("/my-rooms", protect, getMyChatRooms);
-
 router.post("/create-room", protect, createRoom);
-
+router.get("/my-rooms", protect, getMyChatRooms);
 router.get("/messages/:roomId", protect, getMessages);
-
 router.post("/send", protect, sendMessageHttp);
-
 router.post("/mark-read/:roomId", protect, markRoomRead);
-
 router.get("/:roomId", protect, getRoom);
 
 module.exports = router;

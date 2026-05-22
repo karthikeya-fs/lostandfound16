@@ -3,6 +3,8 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import API, { assetUrl } from "../services/api";
 import { getStoredUserId } from "../utils/authStorage";
+import ClaimChatbot from "../components/ClaimChatbot";
+import ClaimChatPanel from "../components/ClaimChatPanel";
 import {
   FiEyeOff,
   FiCheck,
@@ -23,15 +25,20 @@ function ItemDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [item, setItem] = useState(null);
-  const [claimMessage, setClaimMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [claims, setClaims] = useState([]);
   const [myClaim, setMyClaim] = useState(null);
+  const [showClaimBot, setShowClaimBot] = useState(false);
+  const [finalOtp, setFinalOtp] = useState("");
+  const [finalClaimId, setFinalClaimId] = useState(null);
 
   useEffect(() => {
     fetchItem();
-    fetchClaims();
   }, [id]);
+
+  useEffect(() => {
+    if (item) fetchClaims();
+  }, [id, item?._id, item?.postedBy]);
 
   const fetchItem = async () => {
     try {
@@ -47,55 +54,99 @@ function ItemDetails() {
     try {
       const token = localStorage.getItem("token");
       if (!token) return;
-      const res = await API.get(`/claims/item/${id}`);
-      setClaims(res.data);
-      // Find my claim
+
       const myId = getStoredUserId();
-      const mine = res.data.find(
-        (c) => String(c.claimantUserId?._id || c.claimantUserId) === String(myId)
-      );
-      setMyClaim(mine || null);
+      const ownerId = item?.postedBy?._id || item?.postedBy;
+      const isOwner =
+        myId && ownerId && String(ownerId) === String(myId);
+
+      if (isOwner) {
+        const res = await API.get(`/claims/item/${id}`);
+        setClaims(res.data);
+        const mine = res.data.find(
+          (c) =>
+            String(c.claimant?._id || c.claimant || c.claimantUserId?._id || c.claimantUserId) ===
+            String(myId)
+        );
+        setMyClaim(mine || null);
+      } else {
+        const res = await API.get("/claims/my");
+        const mine = (res.data || []).find(
+          (c) => String(c.item?._id || c.item) === String(id)
+        );
+        setMyClaim(mine || null);
+        setClaims([]);
+      }
     } catch (err) {
       console.error("Error fetching claims:", err);
     }
   };
 
-  const handleClaim = async (e) => {
-    e.preventDefault();
+  const openClaimFlow = () => {
     const token = localStorage.getItem("token");
     if (!token) {
       toast.error("Please log in to submit a claim.");
       return navigate("/login");
     }
-    if (!claimMessage.trim()) {
-      toast.error("Please describe why this item is yours.");
-      return;
-    }
+    setShowClaimBot(true);
+  };
+
+  const handleApproveClaim = async (claimId) => {
     try {
       setBusy(true);
-      await API.post("/claims/create", {
-        itemId: id,
-        message: claimMessage.trim(),
-      });
-      toast.success("Claim submitted successfully!");
-      setClaimMessage("");
+      await API.patch(`/claims/${claimId}/approve`);
+      toast.success("Claim approved. Request final OTP next.");
       fetchClaims();
     } catch (error) {
-      toast.error(error.response?.data?.message || "Claim failed");
+      toast.error(error.response?.data?.message || "Approve failed");
     } finally {
       setBusy(false);
     }
   };
 
-  const handleReviewClaim = async (claimId, newStatus) => {
+  const handleRejectClaim = async (claimId) => {
     try {
       setBusy(true);
-      await API.put(`/claims/${claimId}`, { status: newStatus });
-      toast.success(`Claim has been ${newStatus}!`);
+      await API.patch(`/claims/${claimId}/reject`);
+      toast.success("Claim rejected");
+      fetchClaims();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Reject failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleSendFinalOtp = async (claimId) => {
+    try {
+      setBusy(true);
+      const res = await API.post(`/claims/${claimId}/final-otp`);
+      setFinalClaimId(claimId);
+      toast.success(res.data.message || "Final OTP sent");
+      if (res.data.otp) toast(`Dev OTP: ${res.data.otp}`, { icon: "🔑" });
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to send final OTP");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleFinalConfirm = async (e) => {
+    e.preventDefault();
+    if (!finalClaimId || !finalOtp.trim()) {
+      toast.error("Enter final OTP");
+      return;
+    }
+    try {
+      setBusy(true);
+      await API.post(`/claims/${finalClaimId}/final-confirm`, { otp: finalOtp.trim() });
+      toast.success("Claim approved. Item resolved. Chat unlocked.");
+      setFinalOtp("");
+      setFinalClaimId(null);
       fetchClaims();
       fetchItem();
     } catch (error) {
-      toast.error(error.response?.data?.message || "Review action failed");
+      toast.error(error.response?.data?.message || "Invalid OTP");
     } finally {
       setBusy(false);
     }
@@ -262,62 +313,72 @@ function ItemDetails() {
               {!isOwner ? (
                 <div>
                   {myClaim ? (
-                    <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                      <div className="flex-1">
-                        <h4 className="text-white font-bold text-sm mb-1 flex items-center gap-2">
-                          <FiInfo className="text-cyan-400" />
-                          Your Ownership Claim Status
-                        </h4>
-                        <p className="text-gray-400 text-xs leading-relaxed">
-                          Your verification message: <span className="italic text-gray-300">"{myClaim.message}"</span>
-                        </p>
+                    <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-6 flex flex-col gap-4">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div className="flex-1">
+                          <h4 className="text-white font-bold text-sm mb-1 flex items-center gap-2">
+                            <FiInfo className="text-cyan-400" />
+                            Your Ownership Claim Status
+                          </h4>
+                          <p className="text-gray-400 text-xs leading-relaxed">
+                            Status: {myClaim.status === "verified" ? "Waiting for finder approval" : myClaim.status}
+                          </p>
+                        </div>
+
+                        <div className="shrink-0 flex items-center gap-2">
+                          {(myClaim.status === "pending" || myClaim.status === "verified") && (
+                            <span className="flex items-center gap-1 text-xs font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full uppercase">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                              {myClaim.status === "pending" ? "Pending OTP" : "Waiting for finder"}
+                            </span>
+                          )}
+                          {myClaim.status === "approved" && (
+                            <span className="flex items-center gap-1 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full uppercase">
+                              <FiCheckCircle />
+                              Claim Approved
+                            </span>
+                          )}
+                          {myClaim.status === "rejected" && (
+                            <span className="flex items-center gap-1 text-xs font-bold text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-1 rounded-full uppercase">
+                              <FiAlertCircle />
+                              Claim Rejected
+                            </span>
+                          )}
+                        </div>
                       </div>
 
-                      <div className="shrink-0 flex items-center gap-2">
-                        {myClaim.status === "pending" && (
-                          <span className="flex items-center gap-1 text-xs font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full uppercase">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
-                            Pending Approval
-                          </span>
-                        )}
-                        {myClaim.status === "approved" && (
-                          <span className="flex items-center gap-1 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full uppercase">
-                            <FiCheckCircle />
-                            Claim Approved
-                          </span>
-                        )}
-                        {myClaim.status === "rejected" && (
-                          <span className="flex items-center gap-1 text-xs font-bold text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-1 rounded-full uppercase">
-                            <FiAlertCircle />
-                            Claim Rejected
-                          </span>
-                        )}
-                      </div>
+                      {(myClaim.answers || myClaim.securityAnswers)?.length > 0 && (
+                        <div className="bg-black/30 border border-white/5 rounded-xl p-4 space-y-2 mt-2">
+                          <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Your verification answers:</span>
+                          {(myClaim.answers || myClaim.securityAnswers).map((ans, aIdx) => (
+                            <div key={aIdx} className="text-xs">
+                              <p className="text-gray-500">Q: {ans.question}</p>
+                              <p className="text-gray-300 italic mt-0.5">A: {ans.answer}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {myClaim.status === "approved" && (
+                        <ClaimChatPanel claimId={myClaim._id} />
+                      )}
                     </div>
                   ) : (
-                    <form onSubmit={handleClaim} className="flex flex-col gap-3 bg-slate-900/40 border border-white/5 p-6 rounded-2xl">
-                      <div>
-                        <h4 className="font-bold text-white text-sm mb-1">Claim this item</h4>
+                    <div className="flex flex-col items-center justify-center p-8 bg-slate-900/40 border border-dashed border-white/10 rounded-2xl gap-4">
+                      <div className="text-center max-w-md">
+                        <h4 className="font-bold text-white text-base mb-1">Do you own this found item?</h4>
                         <p className="text-gray-400 text-xs leading-relaxed">
-                          Describe distinct details of this item (marks, content, case labels) to verify your ownership.
+                          Answer step-by-step verification questions to prove ownership. OTP will be sent to your email.
                         </p>
                       </div>
-                      <textarea
-                        value={claimMessage}
-                        onChange={(e) => setClaimMessage(e.target.value)}
-                        placeholder="e.g. My wallet has a student ID card with name Mahesh Naidu and a metro pass inside..."
-                        rows={3}
-                        required
-                        className="rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500 transition-colors"
-                      />
                       <button
-                        type="submit"
-                        disabled={busy}
-                        className="form-btn-primary py-3 font-semibold"
+                        type="button"
+                        onClick={openClaimFlow}
+                        className="px-8 py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-lg hover:shadow-cyan-500/20 hover:-translate-y-0.5 transition-all flex items-center gap-2"
                       >
-                        Submit Ownership Claim
+                        <FiCheckCircle className="text-black text-sm" />
+                        This is mine
                       </button>
-                    </form>
+                    </div>
                   )}
                 </div>
               ) : (
@@ -368,49 +429,90 @@ function ItemDetails() {
                       >
                         <div className="flex-1 space-y-2">
                           <div className="flex items-center gap-3">
-                            <span className="font-bold text-white text-sm">{claim.claimantName}</span>
+                            <span className="font-bold text-white text-sm">
+                              {claim.claimant?.name || claim.claimantName}
+                            </span>
                             <span className="text-[10px] bg-white/5 border border-white/10 text-gray-400 px-2 py-0.5 rounded">
-                              {claim.claimantEmail}
+                              {claim.claimant?.email || claim.claimantEmail}
                             </span>
                           </div>
-                          <p className="text-gray-300 text-xs bg-black/40 border border-white/5 p-3 rounded-lg leading-relaxed italic">
-                            "{claim.message}"
-                          </p>
+                          {(claim.answers || claim.securityAnswers)?.length > 0 && (
+                            <div className="mt-2.5 bg-cyan-950/20 border border-cyan-500/10 rounded-xl p-4 space-y-2 text-left">
+                              <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider block">Verification answers:</span>
+                              {(claim.answers || claim.securityAnswers).map((ans, aIdx) => (
+                                <div key={aIdx} className="text-xs">
+                                  <p className="text-gray-400 font-medium">Q: {ans.question}</p>
+                                  <p className="text-white mt-0.5 bg-black/30 px-3 py-2 rounded-lg border border-white/5">
+                                    A: <span className="italic font-medium text-gray-200">{ans.answer}</span>
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                           <span className="text-[10px] text-gray-500 block">
                             Submitted on {new Date(claim.createdAt).toLocaleDateString()}
                           </span>
                         </div>
 
-                        <div className="shrink-0 flex items-center gap-2">
-                          {claim.status === "pending" ? (
+                        <div className="shrink-0 flex flex-col items-end gap-2">
+                          {claim.status === "verified" && (
                             <div className="flex items-center gap-2">
                               <button
                                 type="button"
-                                onClick={() => handleReviewClaim(claim._id, "approved")}
+                                onClick={() => handleApproveClaim(claim._id)}
                                 disabled={busy}
-                                className="px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-black text-xs font-bold rounded-lg flex items-center gap-1 transition-colors"
+                                className="px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-black text-xs font-bold rounded-lg flex items-center gap-1"
                               >
                                 <FiCheck /> Approve
                               </button>
                               <button
                                 type="button"
-                                onClick={() => handleReviewClaim(claim._id, "rejected")}
+                                onClick={() => handleRejectClaim(claim._id)}
                                 disabled={busy}
-                                className="px-3.5 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs font-bold rounded-lg flex items-center gap-1 transition-colors"
+                                className="px-3.5 py-1.5 bg-red-500/10 text-red-400 border border-red-500/20 text-xs font-bold rounded-lg flex items-center gap-1"
                               >
                                 <FiX /> Reject
                               </button>
                             </div>
-                          ) : (
-                            <span
-                              className={`text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full border ${
-                                claim.status === "approved"
-                                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                                  : "bg-red-500/10 text-red-400 border-red-500/20"
-                              }`}
-                            >
-                              {claim.status}
+                          )}
+                          {claim.status === "awaiting_final" && (
+                            <div className="flex flex-col gap-2 items-end">
+                              <button
+                                type="button"
+                                onClick={() => handleSendFinalOtp(claim._id)}
+                                disabled={busy}
+                                className="px-3 py-1.5 bg-cyan-500/20 text-cyan-300 text-xs font-bold rounded-lg"
+                              >
+                                Send final OTP
+                              </button>
+                              {finalClaimId === claim._id && (
+                                <form onSubmit={handleFinalConfirm} className="flex gap-2">
+                                  <input
+                                    value={finalOtp}
+                                    onChange={(e) => setFinalOtp(e.target.value.replace(/\D/g, ""))}
+                                    maxLength={6}
+                                    placeholder="OTP"
+                                    className="w-24 px-2 py-1 rounded-lg bg-slate-950 border border-white/10 text-white text-xs text-center"
+                                  />
+                                  <button type="submit" disabled={busy} className="px-2 py-1 bg-emerald-500 text-black text-xs font-bold rounded-lg">
+                                    Confirm
+                                  </button>
+                                </form>
+                              )}
+                            </div>
+                          )}
+                          {claim.status === "approved" && (
+                            <span className="text-[10px] font-black uppercase text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
+                              Approved
                             </span>
+                          )}
+                          {claim.status === "rejected" && (
+                            <span className="text-[10px] font-black uppercase text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-1 rounded-full">
+                              Rejected
+                            </span>
+                          )}
+                          {claim.status === "pending" && (
+                            <span className="text-[10px] text-amber-400">Awaiting claimant OTP</span>
                           )}
                         </div>
                       </div>
@@ -428,6 +530,24 @@ function ItemDetails() {
           </div>
         </div>
       </div>
+<ClaimChatbot
+  itemId={id}
+  itemTitle={item.title}
+  open={showClaimBot}
+  onClose={() => {
+    setShowClaimBot(false);
+    fetchClaims();
+  }}
+  onClaimSubmitted={() => {
+    setShowClaimBot(false);
+
+    toast.success("Claim submitted successfully");
+
+    fetchClaims();
+
+    fetchItem();
+  }}
+/>
     </div>
   );
 }

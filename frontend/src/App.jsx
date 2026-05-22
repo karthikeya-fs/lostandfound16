@@ -15,6 +15,7 @@ import ItemsList from "./pages/ItemsList";
 import FoundItems from "./pages/FoundItems";
 import LostReports from "./pages/LostReports";
 import Profile from "./pages/Profile";
+import MyClaims from "./pages/MyClaims";
 import ChatLayout from "./layouts/ChatLayout";
 import Messages from "./pages/Messages";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -164,6 +165,16 @@ function App() {
             element={
               isAuth()
                 ? <Profile />
+                : <Navigate to="/login" replace />
+            }
+          />
+
+          {/* My Claims */}
+          <Route
+            path="/my-claims"
+            element={
+              isAuth()
+                ? <MyClaims />
                 : <Navigate to="/login" replace />
             }
           />

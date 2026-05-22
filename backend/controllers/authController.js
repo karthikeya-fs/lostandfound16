@@ -1,4 +1,6 @@
+const crypto = require("crypto");
 const User = require("../models/User");
+const Item = require("../models/Item");
 const Otp = require("../models/otp");
 
 const bcrypt = require("bcrypt");
@@ -191,10 +193,10 @@ const sendOTP = async (req, res) => {
     }
 
     try {
-      await sendEmail(
-        emailKey,
-        "Campus Lost & Found - OTP Verification",
-        `
+      await sendEmail({
+        to: emailKey,
+        subject: "Campus Lost & Found - OTP Verification",
+        html: `
         <div style="font-family: Arial; padding:20px;">
           <h2>Email Verification</h2>
           <p>Your OTP is:</p>
@@ -205,8 +207,8 @@ const sendOTP = async (req, res) => {
   
           <p>This OTP will expire in 5 minutes.</p>
         </div>
-        `
-      );
+        `,
+      });
 
       return res.status(200).json({
         message: "OTP Sent Successfully ✅",
@@ -285,6 +287,132 @@ const verifyOTP = async (req, res) => {
 };
 
 
+// ================= FORGOT / RESET PASSWORD =================
+
+const forgotPassword = async (req, res) => {
+  try {
+    const email =
+      typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const user = await User.findOne(matchEmailCI(email));
+    if (!user) {
+      return res.json({
+        message: "If that email exists, a reset link has been sent.",
+      });
+    }
+
+    const token = crypto.randomBytes(32).toString("hex");
+    user.resetPasswordToken = token;
+    user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000);
+    await user.save();
+
+    const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+    const resetLink = `${clientUrl}/forgot-password?token=${token}&email=${encodeURIComponent(email)}`;
+
+    const mailConfigured =
+      process.env.EMAIL_USER?.trim() && process.env.EMAIL_PASS?.trim();
+
+    if (mailConfigured) {
+      await sendEmail({
+        to: email,
+        subject: "Campus Lost & Found - Reset Password",
+        text: `Reset your password using this link (valid 1 hour): ${resetLink}`,
+      });
+    } else {
+      console.log(`🔑 Password reset link for ${email}: ${resetLink}`);
+    }
+
+    res.json({
+      message: "If that email exists, a reset link has been sent.",
+      ...(mailConfigured ? {} : { resetLink }),
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    const email =
+      typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
+
+    if (!token || !password || password.length < 6) {
+      return res.status(400).json({
+        message: "Valid token and password (min 6 chars) are required",
+      });
+    }
+
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: new Date() },
+      ...(email ? matchEmailCI(email) : {}),
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired reset token" });
+    }
+
+    user.password = await bcrypt.hash(password, 10);
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
+    await user.save();
+
+    res.json({ message: "Password reset successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ================= PROFILE =================
+
+const getProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const postCount = await Item.countDocuments({
+      postedBy: user._id,
+      isRemoved: { $ne: true },
+    });
+
+    res.json({
+      ...user.toJSON(),
+      postCount,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const updateProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const { name, department, rollNumber, phone, github, linkedin } = req.body;
+    if (name !== undefined) user.name = String(name).trim();
+    if (department !== undefined) user.department = String(department).trim();
+    if (rollNumber !== undefined) user.rollNumber = String(rollNumber).trim();
+    if (phone !== undefined) user.phone = String(phone).trim();
+    if (github !== undefined) user.github = String(github).trim();
+    if (linkedin !== undefined) user.linkedin = String(linkedin).trim();
+
+    await user.save();
+    res.json({ message: "Profile updated", user: user.toJSON() });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // ================= EXPORTS =================
 
 module.exports = {
@@ -292,4 +420,8 @@ module.exports = {
   loginUser,
   sendOTP,
   verifyOTP,
+  forgotPassword,
+  resetPassword,
+  getProfile,
+  updateProfile,
 };

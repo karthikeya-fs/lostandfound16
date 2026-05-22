@@ -1,5 +1,6 @@
 const requireAdmin = (req, res, next) => {
-  if (req.userRole !== "admin") {
+  const role = req.userRole || req.userDoc?.role;
+  if (role !== "admin") {
     return res.status(403).json({
       message: "Admin access required",
     });

@@ -9,7 +9,7 @@ const ChatRoom = require("../models/ChatRoom");
  */
 async function findApprovedClaimForItem(itemId) {
   return Claim.findOne({
-    itemId,
+    $or: [{ item: itemId }, { itemId }],
     status: "approved",
   }).sort({ updatedAt: -1 });
 }
@@ -18,6 +18,7 @@ async function findApprovedClaimForItem(itemId) {
  * Resolve claimant Mongo id from claim (ObjectId or lookup by email).
  */
 async function resolveClaimantId(claim) {
+  if (claim.claimant) return claim.claimant;
   if (claim.claimantUserId) return claim.claimantUserId;
   if (!claim.claimantEmail) return null;
   const email = String(claim.claimantEmail).trim().toLowerCase();

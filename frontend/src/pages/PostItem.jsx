@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import toast from "react-hot-toast";
 import API from "../services/api";
 import FormLayout from "../components/FormLayout";
 import CampusMap from "../components/CampusMap";
@@ -17,6 +18,7 @@ import {
   FiCreditCard,
   FiEyeOff,
   FiBox,
+  FiLock,
 } from "react-icons/fi";
 
 const containerVariants = {
@@ -51,6 +53,13 @@ function PostItem() {
     image: null,
     blurImage: false,
   });
+
+  const [securityQuestionsEnabled, setSecurityQuestionsEnabled] = useState(false);
+  const [verificationQuestions, setVerificationQuestions] = useState([
+    { question: "", answer: "" },
+    { question: "", answer: "" },
+  ]);
+  const [generatingQuestions, setGeneratingQuestions] = useState(false);
 
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -91,15 +100,36 @@ function PostItem() {
     setFormData((prev) => ({ ...prev, blurImage: !prev.blurImage }));
   };
 
+  const handleGenerateQuestions = async () => {
+    if (!formData.title || !formData.description) return;
+    try {
+      setGeneratingQuestions(true);
+      const res = await API.post("/items/generate-questions", {
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+      });
+      const generated = res.data.questions || [];
+      setVerificationQuestions([
+        { question: generated[0] || "", answer: verificationQuestions[0]?.answer || "" },
+        { question: generated[1] || "", answer: verificationQuestions[1]?.answer || "" },
+      ]);
+    } catch (error) {
+      toast.error("Failed to auto-generate questions. Enter them manually.");
+    } finally {
+      setGeneratingQuestions(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!formData.category) {
-      alert("Please select a category.");
+      toast.error("Please select a category.");
       return;
     }
     if (!formData.location) {
-      alert("Please tag a campus location.");
+      toast.error("Please tag a campus location.");
       return;
     }
 
@@ -118,11 +148,16 @@ function PostItem() {
         data.append("image", formData.image);
       }
 
+      const questionsToSend = securityQuestionsEnabled
+        ? verificationQuestions.filter((q) => q.question?.trim() && q.answer?.trim())
+        : [];
+      data.append("verificationQuestions", JSON.stringify(questionsToSend));
+
       const res = await API.post("/items/create", data, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      alert(res.data.message || "Item Posted Successfully ✅");
+      toast.success(res.data.message || "Item posted successfully");
       // Reset form
       setFormData({
         title: "",
@@ -134,9 +169,14 @@ function PostItem() {
         image: null,
         blurImage: false,
       });
+      setSecurityQuestionsEnabled(false);
+      setVerificationQuestions([
+        { question: "", answer: "" },
+        { question: "", answer: "" },
+      ]);
       setPreview(null);
     } catch (error) {
-      alert(error.response?.data?.message || "Something went wrong");
+      toast.error(error.response?.data?.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -223,6 +263,99 @@ function PostItem() {
               }`}
             ></div>
           </button>
+        </motion.div>
+
+        {/* Security Questionnaire */}
+        <motion.div
+          variants={itemVariants}
+          className="bg-slate-900/40 border border-white/10 rounded-2xl p-5 flex flex-col gap-4"
+        >
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex-1">
+              <h4 className="text-white font-bold text-sm flex items-center gap-2 mb-1">
+                <FiLock className="text-cyan-400" />
+                Security Verification Questions
+              </h4>
+              <p className="text-gray-400 text-xs leading-relaxed">
+                Add 1-2 hidden questions that a claimant must answer to verify their ownership (e.g. background image on phone, contents inside wallet).
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSecurityQuestionsEnabled(!securityQuestionsEnabled)}
+              className={`w-14 h-7 rounded-full p-1 transition-all duration-300 relative shrink-0 ${
+                securityQuestionsEnabled ? "bg-cyan-500" : "bg-gray-600"
+              }`}
+            >
+              <div
+                className={`w-5 h-5 bg-white rounded-full transition-all duration-300 shadow-md ${
+                  securityQuestionsEnabled ? "translate-x-7" : "translate-x-0"
+                }`}
+              ></div>
+            </button>
+          </div>
+
+          {securityQuestionsEnabled && (
+            <div className="flex flex-col gap-3 mt-3 pt-3 border-t border-white/5">
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-xs font-bold text-gray-300">Set Hidden Questions</label>
+                <button
+                 
+  type="button"
+  onClick={handleGenerateQuestions}
+
+                  className="px-3 py-1.5 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-bold rounded-lg hover:bg-cyan-500/20 disabled:opacity-50 disabled:pointer-events-none transition-all flex items-center gap-1.5"
+                >
+                  {generatingQuestions ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <FiCpu className="text-cyan-400" />
+                      ✨ Generate with AI
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {!formData.title || !formData.description ? (
+                <p className="text-[11px] text-amber-400/80 italic">
+                  * Fill out the item title and description to enable AI question generation.
+                </p>
+              ) : null}
+
+              <div className="flex flex-col gap-4">
+                {[0, 1].map((idx) => (
+                  <div key={idx} className="space-y-2 p-3 rounded-xl bg-black/20 border border-white/5">
+                    <input
+                      type="text"
+                      placeholder={`Question ${idx + 1} (hidden from public)`}
+                      value={verificationQuestions[idx]?.question || ""}
+                      onChange={(e) => {
+                        const updated = [...verificationQuestions];
+                        updated[idx] = { ...updated[idx], question: e.target.value };
+                        setVerificationQuestions(updated);
+                      }}
+                      className="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Expected answer (only you see this)"
+                      value={verificationQuestions[idx]?.answer || ""}
+                      onChange={(e) => {
+                        const updated = [...verificationQuestions];
+                        updated[idx] = { ...updated[idx], answer: e.target.value };
+                        setVerificationQuestions(updated);
+                      }}
+                      className="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </motion.div>
 
         {/* Title */}
