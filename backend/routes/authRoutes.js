@@ -5,6 +5,7 @@ const protect = require("../middleware/authMiddleware");
 const {
   registerUser,
   loginUser,
+  verifyLoginOtp,
   sendOTP,
   verifyOTP,
   forgotPassword,
@@ -15,6 +16,7 @@ const {
 
 router.post("/register", registerUser);
 router.post("/login", loginUser);
+router.post("/login/verify-otp", verifyLoginOtp);
 router.post("/send-otp", sendOTP);
 router.post("/verify-otp", verifyOTP);
 router.post("/forgot-password", forgotPassword);

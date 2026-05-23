@@ -101,7 +101,10 @@ function PostItem() {
   };
 
   const handleGenerateQuestions = async () => {
-    if (!formData.title || !formData.description) return;
+    if (!formData.title || !formData.description) {
+      toast.error("Please fill in the item title and description first");
+      return;
+    }
     try {
       setGeneratingQuestions(true);
       const res = await API.post("/items/generate-questions", {
@@ -111,8 +114,8 @@ function PostItem() {
       });
       const generated = res.data.questions || [];
       setVerificationQuestions([
-        { question: generated[0] || "", answer: verificationQuestions[0]?.answer || "" },
-        { question: generated[1] || "", answer: verificationQuestions[1]?.answer || "" },
+        { question: generated[0]?.question || generated[0] || "", answer: verificationQuestions[0]?.answer || "" },
+        { question: generated[1]?.question || generated[1] || "", answer: verificationQuestions[1]?.answer || "" },
       ]);
     } catch (error) {
       toast.error("Failed to auto-generate questions. Enter them manually.");
